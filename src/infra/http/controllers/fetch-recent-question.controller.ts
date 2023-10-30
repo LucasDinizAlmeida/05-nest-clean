@@ -1,8 +1,8 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
 import { ZodValidationPipe } from '@/infra/http/pipes/zod-validation-pipes'
-import { PrismaService } from '@/infra/database/prisma/prisma.service'
 import { z } from 'zod'
+import { FetchRecentQuestionsUseCase } from '@/domain/forum/application/use-cases/fetch-recent-questions'
 
 const pageQueryParamSchema = z
   .string()
@@ -18,22 +18,14 @@ type PageQueryParamsSchema = z.infer<typeof pageQueryParamSchema>
 @Controller('/questions')
 @UseGuards(AuthGuard('jwt'))
 export class FetchRecentQuestionController {
-  constructor(private prisma: PrismaService) {}
+  constructor(private fetchRecents: FetchRecentQuestionsUseCase) {}
 
   @Get()
   async handle(
     @Query('page', queryValidationPipe)
     page: PageQueryParamsSchema,
   ) {
-    const perPage = 20
-
-    const questions = await this.prisma.question.findMany({
-      take: perPage,
-      skip: (page - 1) * perPage,
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
+    const questions = await this.fetchRecents.execute({ page })
 
     return { questions }
   }
